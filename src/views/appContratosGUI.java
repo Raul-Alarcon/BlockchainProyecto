@@ -43,26 +43,31 @@ public class appContratosGUI extends javax.swing.JFrame {
     private ArrayList<contratos> listaContratosPendientes;
     private DefaultComboBoxModel<String> comboModel;
     private BlockChain blockchain;
+    private models.Usuario usuarioActual;
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(appContratosGUI.class.getName());
 
     /**
      * Creates new form appContratosGUI constructor
      */
-    public appContratosGUI() {
+    public appContratosGUI(models.Usuario usuario) {
+        this.usuarioActual = usuario;
         initComponents();
         Security.addProvider(new BouncyCastleProvider());
         this.listaContratos = new ArrayList<>();
         this.blockchain = new BlockChain(4, "0");
-        // El bloque génesis se crea con una lista de contratos vacía
         boolean genesisCreado = this.blockchain.createGenesis(new ArrayList<>());
-
         if (genesisCreado) {
             System.out.println("Bloque Genesis creado con exito.");
         } else {
             System.out.println(" El Bloque Genesis ya existia o hubo un error.");
         }
         this.listaContratosPendientes = new ArrayList<>();
+        this.setTitle("Blockchain - Usuario: " + usuario.getUsuario());
+    }
+
+    public appContratosGUI() {
+        this(new models.Usuario(0, "invitado", "invitado@blockchain.com", "usuario", true));
     }
 
     private void mostrarUltimoBloque() {
@@ -104,6 +109,8 @@ public class appContratosGUI extends javax.swing.JFrame {
         jLabel8 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
         jPanel9 = new javax.swing.JPanel();
+        jLabelUsuario = new javax.swing.JLabel();
+        jButtonLogout = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -308,15 +315,35 @@ public class appContratosGUI extends javax.swing.JFrame {
 
         jPanel9.setBorder(javax.swing.BorderFactory.createTitledBorder("Info Usuario"));
 
+        jLabelUsuario.setText("Usuario: " + (usuarioActual != null ? usuarioActual.getUsuario() : "invitado"));
+        jLabelUsuario.setFont(new java.awt.Font("Segoe UI", 1, 12));
+
+        jButtonLogout.setText("Cerrar Sesión");
+        jButtonLogout.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonLogoutActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
         jPanel9.setLayout(jPanel9Layout);
         jPanel9Layout.setHorizontalGroup(
             jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabelUsuario)
+                    .addComponent(jButtonLogout, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
         );
         jPanel9Layout.setVerticalGroup(
             jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabelUsuario)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jButtonLogout)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -557,6 +584,15 @@ public class appContratosGUI extends javax.swing.JFrame {
         redBlockchain.setVisible(true);
     }//GEN-LAST:event_jButton11ActionPerformed
 
+    private void jButtonLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonLogoutActionPerformed
+        int opcion = JOptionPane.showConfirmDialog(this, "¿Deseas cerrar sesión?", "Confirmar", JOptionPane.YES_NO_OPTION);
+        if (opcion == JOptionPane.YES_OPTION) {
+            this.dispose();
+            LoginGUI login = new LoginGUI();
+            login.setVisible(true);
+        }
+    }//GEN-LAST:event_jButtonLogoutActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -578,8 +614,8 @@ public class appContratosGUI extends javax.swing.JFrame {
         }
         //</editor-fold>
 
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new appContratosGUI().setVisible(true));
+        /* Create and display the login form */
+        java.awt.EventQueue.invokeLater(() -> new LoginGUI().setVisible(true));
     }
 
     private void mostrarUltimoBloqueEnTextArea3() {
@@ -618,8 +654,10 @@ public class appContratosGUI extends javax.swing.JFrame {
     private javax.swing.JButton jButton8;
     private javax.swing.JButton jButtonGuardarBC;
     private javax.swing.JButton jButtonGuardarBC1;
+    private javax.swing.JButton jButtonLogout;
     private javax.swing.JComboBox<String> jComboBox3;
     private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabelUsuario;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
