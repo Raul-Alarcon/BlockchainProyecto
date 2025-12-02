@@ -10,7 +10,7 @@ import java.io.Serializable;
  *
  * @author Raul
  */
-public class servicio implements Serializable{
+public class servicio implements Serializable, Cloneable{
     private String idServicio;
     private String descripcion;
     private String estado;
@@ -53,5 +53,15 @@ public class servicio implements Serializable{
 
     public void setMontoServicio(double montoServicio) {
         this.montoServicio = montoServicio;
+    }
+
+    @Override
+    public String toString() {
+        return idServicio + descripcion + estado + String.format("%.2f", montoServicio);
+    }
+    
+    @Override
+    public servicio clone() {
+        return new servicio(this.idServicio, this.descripcion, this.estado, this.montoServicio);
     }
 }

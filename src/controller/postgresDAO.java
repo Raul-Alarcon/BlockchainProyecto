@@ -14,60 +14,80 @@ import java.sql.SQLException;
  * @author Raul
  */
 public class postgresDAO {
-    private static final String URL = "jdbc:postgresql://localhost:5432/smart_bc"; 
+    private static final String URL = "jdbc:postgresql://localhost:5432/blockchain_db?currentSchema=public"; 
     private static final String USER = "postgres"; 
     private static final String PASSWORD = "root"; 
 
     private Connection conectar() throws SQLException {
         try {
-            // Carga el driver JDBC (que ya agregaste a las librerías)
             Class.forName("org.postgresql.Driver"); 
         } catch (ClassNotFoundException e) {
-            throw new SQLException("Error: No se encontró el driver de PostgreSQL. ¿Está el JAR en el proyecto?");
+            throw new SQLException("Error: No se encontró el driver de PostgreSQL.");
         }
-        // Crea la conexión
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
-public void guardarNonce(int indiceBloque, int nonce, String hashAnterior) throws SQLException {
     
-    // El SQL ahora incluye la nueva columna y el valor
-    String SQL = "INSERT INTO nonces_blockchain (indice_bloque, nonce, hash_anterior) VALUES (?, ?, ?) " +
-                 "ON CONFLICT (indice_bloque) DO UPDATE SET nonce = EXCLUDED.nonce, hash_anterior = EXCLUDED.hash_anterior"; 
-
-    try (Connection conn = conectar();
-         PreparedStatement pstmt = conn.prepareStatement(SQL)) {
-
-        pstmt.setInt(1, indiceBloque);
-        pstmt.setInt(2, nonce);
-        pstmt.setString(3, hashAnterior);
-        pstmt.executeUpdate();
-
-    } catch (SQLException e) {
-        System.err.println("Error al guardar Nonce/HashAnterior en DB: " + e.getMessage());
-        throw e;
-    }
-}
-
-    public int obtenerNonce(int indiceBloque) throws SQLException {
-        String SQL = "SELECT nonce FROM nonces_blockchain WHERE indice_bloque = ?";
-        int nonceDB = -1;
+    public void guardarNonce(int blockId, String prevHash, int nonce, String hash, long timestamp) throws SQLException {
+        String SQL = "INSERT INTO public.nonces (block_id, prev_hash, nonce, hash, timestamp) " +
+                     "VALUES (?, ?, ?, ?, ?) " +
+                     "ON CONFLICT (block_id, prev_hash) DO UPDATE " +
+                     "SET nonce = EXCLUDED.nonce, hash = EXCLUDED.hash, timestamp = EXCLUDED.timestamp";
 
         try (Connection conn = conectar();
              PreparedStatement pstmt = conn.prepareStatement(SQL)) {
+            pstmt.setInt(1, blockId);
+            pstmt.setString(2, prevHash);
+            pstmt.setInt(3, nonce);
+            pstmt.setString(4, hash);
+            pstmt.setLong(5, timestamp);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Error al guardar nonce: " + e.getMessage());
+            throw e;
+        }
+    }
 
-            pstmt.setInt(1, indiceBloque);
+    public Integer obtenerNonce(int blockId, String prevHash) throws SQLException {
+        String SQL = "SELECT nonce FROM public.nonces WHERE block_id = ? AND prev_hash = ?";
+
+        try (Connection conn = conectar();
+             PreparedStatement pstmt = conn.prepareStatement(SQL)) {
+            pstmt.setInt(1, blockId);
+            pstmt.setString(2, prevHash);
             
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    nonceDB = rs.getInt("nonce");
+                    return rs.getInt("nonce");
                 }
             }
-        } 
-        
-        if (nonceDB == -1) {
-            throw new SQLException("El nonce del bloque #" + indiceBloque + " no se encontró en la base de datos.");
         }
-        
-        return nonceDB;
+        return null;
+    }
+    
+    public boolean testConnection() {
+        try (Connection conn = conectar()) {
+            if (conn != null && !conn.isClosed()) {
+                // Mostrar información de la conexión
+                System.out.println("  📍 Base de datos: " + conn.getCatalog());
+                System.out.println("  👤 Usuario: " + conn.getMetaData().getUserName());
+                System.out.println("  🔗 URL: " + conn.getMetaData().getURL());
+                
+                // Verificar si la tabla existe
+                var stmt = conn.createStatement();
+                var rs = stmt.executeQuery(
+                    "SELECT COUNT(*) FROM information_schema.tables " +
+                    "WHERE table_schema = 'public' AND table_name = 'nonces'"
+                );
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    System.out.println("  📊 Tabla 'nonces' encontrada: " + (count > 0 ? "SÍ" : "NO"));
+                }
+                return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            System.err.println("Error de conexión: " + e.getMessage());
+            return false;
+        }
     }
 }

@@ -6,6 +6,7 @@ import java.util.Date;
 import models.contratos;
 
 public class Block implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private int id;
     private int nonce;
@@ -14,11 +15,15 @@ public class Block implements Serializable {
     private String previousHash;
     private ArrayList<contratos> listaContratos;
 
-    public Block(int pId, String pPrevHash, ArrayList<contratos> pListaContratos) { // <-- ¡IMPORTANTE!
+    public Block(int pId, String pPrevHash, ArrayList<contratos> pListaContratos) {
         this.id = pId;
         this.timeStamp = new Date().getTime();
         this.previousHash = pPrevHash;
-        this.listaContratos = pListaContratos;
+        // Crear una copia PROFUNDA de los contratos para evitar modificaciones externas
+        this.listaContratos = new ArrayList<>();
+        for (contratos c : pListaContratos) {
+            this.listaContratos.add(c.clone());
+        }
         this.nonce = -1;
         this.hash = null;
     }

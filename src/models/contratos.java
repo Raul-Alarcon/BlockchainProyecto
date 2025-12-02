@@ -11,7 +11,7 @@ import java.util.ArrayList;
  *
  * @author Raul
  */
-public class contratos implements Serializable{
+public class contratos implements Serializable, Cloneable{
     private String idContrato;
     private String parteA;
     private String parteB;
@@ -67,5 +67,26 @@ public class contratos implements Serializable{
         servicio nuevoServicio = new servicio(idServicio, descripcion, estado, montoServicio);
         this.listaServicios.add(nuevoServicio);
         this.valorTotal += montoServicio;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(idContrato).append(parteA).append(parteB);
+        sb.append(String.format("%.2f", valorTotal));
+        for (servicio s : listaServicios) {
+            sb.append(s.toString());
+        }
+        return sb.toString();
+    }
+    
+    @Override
+    public contratos clone() {
+        contratos copia = new contratos(this.idContrato, this.parteA, this.parteB);
+        copia.valorTotal = this.valorTotal;
+        for (servicio s : this.listaServicios) {
+            copia.listaServicios.add(s.clone());
+        }
+        return copia;
     }
 }

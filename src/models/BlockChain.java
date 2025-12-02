@@ -74,11 +74,18 @@ public class BlockChain implements Serializable {
         int nonce = blk.getNonce();
         String sHash = "";
         sHash = this.generateHash(cad + Integer.toString(nonce));
-        if (sHash.equals(blk.getHash())) {
-            return true;
-        } else {
+        
+        // Verificar que el hash calculado coincida con el almacenado
+        if (!sHash.equals(blk.getHash())) {
             return false;
         }
+        
+        // Verificar que el hash cumpla con la prueba de trabajo (comience con los ceros requeridos)
+        if (!sHash.substring(0, complexity).equals(this.proofOfWork)) {
+            return false;
+        }
+        
+        return true;
     }
 
     public boolean addProvedBlock(Block blk) {
@@ -92,19 +99,66 @@ public class BlockChain implements Serializable {
     }
 
     public void mineBlock() {
-        String cad
-                = this.blockChain.get(this.blockChain.size() - 1).toString();
+        Block ultimoBloque = this.blockChain.get(this.blockChain.size() - 1);
+        String cad = ultimoBloque.toString();
+        
+        System.out.println("\n=== MINANDO BLOQUE #" + ultimoBloque.getId() + " ===");
+        System.out.println("Data COMPLETA para minar: " + cad);
+        System.out.println("Longitud data: " + cad.length());
+        
+        // Intentar obtener nonce de BD
+        controller.postgresDAO dao = new controller.postgresDAO();
+        try {
+            Integer nonceGuardado = dao.obtenerNonce(
+                ultimoBloque.getId(), 
+                ultimoBloque.getPreviousHash()
+            );
+            
+            if (nonceGuardado != null) {
+                // VALIDAR que el nonce guardado funcione con los datos actuales
+                String hashCalculado = this.generateHash(cad + nonceGuardado);
+                if (hashCalculado.substring(0, complexity).equals(this.proofOfWork)) {
+                    ultimoBloque.register(nonceGuardado, hashCalculado);
+                    System.out.println("✅ Nonce recuperado de BD y validado");
+                    System.out.println("Hash final: " + hashCalculado);
+                    return;
+                } else {
+                    System.out.println("⚠️ Nonce de BD no válido para estos datos, minando nuevo...");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("⚠️ BD no disponible, minando normalmente");
+        }
+        
+        // Minar normalmente
         int nonce = 0;
         String sHash = "";
+        
         while (true) {
             sHash = this.generateHash(cad + Integer.toString(nonce));
-            if (sHash.subSequence(0, complexity).equals(this.proofOfWork)) {
-                this.blockChain.get(this.blockChain.size() - 1).register(nonce, sHash);
+            if (sHash.substring(0, complexity).equals(this.proofOfWork)) {
+                ultimoBloque.register(nonce, sHash);
+                System.out.println("✅ Bloque minado exitosamente");
+                System.out.println("Nonce encontrado: " + nonce);
+                System.out.println("Hash final: " + sHash);
+                
+                // Guardar en BD
+                try {
+                    dao.guardarNonce(
+                        ultimoBloque.getId(),
+                        ultimoBloque.getPreviousHash(),
+                        nonce,
+                        sHash,
+                        ultimoBloque.getTimeStamp()
+                    );
+                    System.out.println("💾 Nonce guardado en BD");
+                } catch (Exception e) {
+                    System.err.println("Error guardando nonce: " + e.getMessage());
+                }
                 break;
             }
             nonce++;
         }
-
     }
 
     private String generateHash(String pCad) {
@@ -243,20 +297,28 @@ public class BlockChain implements Serializable {
             previousBlock = this.blockChain.get(i - 1);
 
             // --- 1. Verificar la integridad del Hash Propio (PoW) ---
-            // Compara el hash calculado con el hash registrado en el bloque.
+            String blockData = currentBlock.toString();
+            String calculatedHash = this.generateHash(blockData + currentBlock.getNonce());
+            System.out.println("\n=== VALIDANDO BLOQUE #" + currentBlock.getId() + " ===");
+            System.out.println("Hash almacenado: " + currentBlock.getHash());
+            System.out.println("Hash calculado:  " + calculatedHash);
+            System.out.println("Nonce: " + currentBlock.getNonce());
+            System.out.println("Data COMPLETA: " + blockData);
+            System.out.println("Longitud data: " + blockData.length());
+            
             if (!this.getProofOfWork_overBlock(currentBlock)) {
-                System.out.println("Bloque #" + currentBlock.getId() + ": Hash no es válido (Falla PoW).");
+                System.out.println("❌ Bloque #" + currentBlock.getId() + ": Hash no es válido (Falla PoW).");
                 return false;
             }
 
             // --- 2. Verificar la integridad del Enlace ---
-            // Compara el hash anterior registrado con el hash actual del bloque previo.
             if (!previousBlock.getHash().equals(currentBlock.getPreviousHash())) {
-                System.out.println("Bloque #" + previousBlock.getId() + " y #" + currentBlock.getId() + ": Enlace de Hash Roto.");
+                System.out.println("❌ Bloque #" + previousBlock.getId() + " y #" + currentBlock.getId() + ": Enlace de Hash Roto.");
                 return false;
             }
+            System.out.println("✅ Bloque #" + currentBlock.getId() + " es válido");
         }
-        return true; // Si pasa todos los bucles, la cadena es válida.
+        return true;
     }
 
     @Override
