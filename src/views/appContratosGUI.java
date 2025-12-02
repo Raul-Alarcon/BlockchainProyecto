@@ -4,13 +4,12 @@
  */
 package views;
 
-
-
 import models.contratos;
 import models.Encriptar;
 import models.servicio;
 import models.BlockChain;
 import models.Block;
+import utils.ReportUtil;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
@@ -43,6 +42,7 @@ import java.sql.SQLException;
 public class appContratosGUI extends javax.swing.JFrame {
 
     private final ArrayList<contratos> listaContratos;
+    private ArrayList<contratos> listaContratosPendientes;
     private DefaultComboBoxModel<String> comboModel;
     private BlockChain blockchain;
 
@@ -55,16 +55,25 @@ public class appContratosGUI extends javax.swing.JFrame {
         initComponents();
         Security.addProvider(new BouncyCastleProvider());
         this.listaContratos = new ArrayList<>();
-        this.blockchain = new BlockChain();
-        this.comboModel = new DefaultComboBoxModel<>();
-        /*jComboBox1.setModel(comboModel);
-        DefaultComboBoxModel<String> estadoModel = new DefaultComboBoxModel<>();
-        estadoModel.addElement("Pendiente");
-        estadoModel.addElement("En Progreso");
-        estadoModel.addElement("Completado");
-        jComboBox2.setModel(estadoModel);*/
-        actualizarEstadoBlockchain();
-    
+        this.blockchain = new BlockChain(4, "0");
+        // El bloque génesis se crea con una lista de contratos vacía, 
+        // ya que la cadena empieza de cero.
+        boolean genesisCreado = this.blockchain.createGenesis(this.listaContratos);
+
+        if (genesisCreado) {
+            System.out.println("Bloque Genesis creado con exito.");
+        } else {
+            System.out.println(" El Bloque Genesis ya existia o hubo un error.");
+        }
+        this.listaContratosPendientes = new ArrayList<>();
+    }
+
+    private void mostrarUltimoBloque() {
+        models.Block ultimoBloque = this.blockchain.getLastBlock();
+
+        // 🚨 CAMBIO CLAVE: Pasamos el objeto 'blockchain' también
+        String infoBloque = utils.BlockchainViewUtil.formatLastBlock(this.blockchain, ultimoBloque);
+        jTextArea2.setText(infoBloque);
     }
 
     /**
@@ -203,7 +212,7 @@ public class appContratosGUI extends javax.swing.JFrame {
                 .addComponent(jButtonGuardarBC)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButtonGuardarBC1)
-                .addGap(35, 35, 35))
+                .addContainerGap())
         );
 
         jPanel4.setBorder(javax.swing.BorderFactory.createTitledBorder("Datos"));
@@ -239,7 +248,9 @@ public class appContratosGUI extends javax.swing.JFrame {
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 272, Short.MAX_VALUE)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 258, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, Short.MAX_VALUE))
         );
 
         jPanel8.setBorder(javax.swing.BorderFactory.createTitledBorder("Servidor"));
@@ -318,6 +329,11 @@ public class appContratosGUI extends javax.swing.JFrame {
         jLabel8.setText("Server");
 
         jButton1.setText("Crecar Cliente");
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
         jPanel6.setLayout(jPanel6Layout);
@@ -354,7 +370,7 @@ public class appContratosGUI extends javax.swing.JFrame {
         );
         jPanel9Layout.setVerticalGroup(
             jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 59, Short.MAX_VALUE)
+            .addGap(0, 0, Short.MAX_VALUE)
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -380,35 +396,31 @@ public class appContratosGUI extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jPanel3, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jPanel5, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+                .addGap(2, 2, 2))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-        // TODO add your handling code here:
         if (listaContratos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay contratos para generar el reporte HTML.", "Reporte Vacío", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No hay contratos para generar el reporte HTML.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Porción de código para crear el apuntador del archivo con JFileChooser
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Guardar Reporte HTML");
-
-        // Configurar el filtro de archivo para HTML
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos HTML (*.html)", "html"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos HTML (*.html)", "html"));
 
         int userSelection = fileChooser.showSaveDialog(this);
         File fileToSave = null;
@@ -416,157 +428,53 @@ public class appContratosGUI extends javax.swing.JFrame {
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             fileToSave = fileChooser.getSelectedFile();
             String filePath = fileToSave.getAbsolutePath();
-            // Asegurarse de que el nombre del archivo termine en .html
             if (!filePath.toLowerCase().endsWith(".html")) {
                 fileToSave = new File(filePath + ".html");
             }
         } else {
-            return; // El usuario canceló la operación
+            return;
         }
 
-        // Porción de código para ensamblar el reporte HTML
-        StringBuilder htmlContent = new StringBuilder();
-        htmlContent.append("<!DOCTYPE html>\n");
-        htmlContent.append("<html lang=\"es\">\n");
-        htmlContent.append("<head>\n");
-        htmlContent.append("    <meta charset=\"UTF-8\">\n");
-        htmlContent.append("    <title>Reporte de Contratos</title>\n");
-        htmlContent.append("    <style>\n");
-        htmlContent.append("        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }\n");
-        htmlContent.append("        .container { max-width: 900px; margin: auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n");
-        htmlContent.append("        h1 { text-align: center; color: #4CAF50; }\n");
-        htmlContent.append("        .contrato { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; background-color: #fafafa; }\n");
-        htmlContent.append("        .contrato h2 { color: #2C3E50; margin-top: 0; }\n");
-        htmlContent.append("        .servicio { border-left: 3px solid #7f8c8d; padding-left: 10px; margin: 10px 0; }\n");
-        htmlContent.append("        .servicio h3 { color: #34495e; }\n");
-        htmlContent.append("    </style>\n");
-        htmlContent.append("</head>\n");
-        htmlContent.append("<body>\n");
-        htmlContent.append("    <div class=\"container\">\n");
-        htmlContent.append("        <h1>Reporte de Contratos y Servicios</h1>\n");
+        try {
+            // *** REFACTORIZADO: Usa la clase ReportUtil ***
+            String htmlContent = utils.ReportUtil.generateHtmlReport(listaContratos);
 
-        for (contratos c : listaContratos) {
-            htmlContent.append("        <div class=\"contrato\">\n");
-            htmlContent.append("            <h2>Contrato: ").append(c.getIdContrato()).append("</h2>\n");
-            htmlContent.append("            <p><strong>Cliente:</strong> ").append(c.getParteA()).append("</p>\n");
-            htmlContent.append("            <p><strong>Proveedor:</strong> ").append(c.getParteB()).append("</p>\n");
-            htmlContent.append("            <p><strong>Valor Total:</strong> $").append(String.format("%.2f", c.getValorTotal())).append("</p>\n");
-
-            if (!c.getListaServicios().isEmpty()) {
-                htmlContent.append("            <h3>Servicios:</h3>\n");
-                for (servicio s : c.getListaServicios()) {
-                    htmlContent.append("            <div class=\"servicio\">\n");
-                    htmlContent.append("                <h4>Servicio: ").append(s.getIdServicio()).append("</h4>\n");
-                    htmlContent.append("                <p><strong>Descripción:</strong> ").append(s.getDescripcion()).append("</p>\n");
-                    htmlContent.append("                <p><strong>Estado:</strong> ").append(s.getEstado()).append("</p>\n");
-                    htmlContent.append("                <p><strong>Monto:</strong> $").append(String.format("%.2f", s.getMontoServicio())).append("</p>\n");
-                    htmlContent.append("            </div>\n");
-                }
+            try (FileWriter writer = new FileWriter(fileToSave)) {
+                writer.write(htmlContent);
+                JOptionPane.showMessageDialog(this, "Reporte HTML generado con éxito.", "Reporte Creado", JOptionPane.INFORMATION_MESSAGE);
             }
-            htmlContent.append("        </div>\n");
-        }
-
-        htmlContent.append("    </div>\n");
-        htmlContent.append("</body>\n");
-        htmlContent.append("</html>\n");
-
-        // Escribir el contenido en un archivo
-        try (FileWriter writer = new FileWriter(fileToSave)) {
-            writer.write(htmlContent.toString());
-            JOptionPane.showMessageDialog(this, "Reporte HTML generado con éxito.", "Reporte Creado", JOptionPane.INFORMATION_MESSAGE);
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error al escribir el archivo HTML: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error al escribir el archivo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            logger.log(java.util.logging.Level.SEVERE, "Error al generar reporte HTML", e);
         }
     }//GEN-LAST:event_jButton3ActionPerformed
-// falta diseno para visualizar los datos
-    /**dice anterior
-     *  // TODO add your handling code here:
-        jTextArea2.setText("");
 
-        // Verificar si la lista de contratos no está vacía
-        if (listaContratos.isEmpty()) {
-            jTextArea2.append("No hay contratos para listar.");
-            return;
-        }
-
-        StringBuilder reporte = new StringBuilder();
-        reporte.append("=================== REPORTE DE CONTRATOS ===================\n\n");
-
-        for (contratos c : listaContratos) {
-            reporte.append("ID Contrato: ").append(c.getIdContrato()).append("\n");
-            reporte.append("Cliente: ").append(c.getParteA()).append("\n");
-            reporte.append("Proveedor: ").append(c.getParteB()).append("\n");
-            reporte.append("Valor Total del Contrato: ").append(String.format("$%.2f", c.getValorTotal())).append("\n");
-            reporte.append("--- Servicios del Contrato ---\n");
-
-            if (c.getListaServicios().isEmpty()) {
-                reporte.append("   (Este contrato no tiene servicios registrados)\n");
-            } else {
-                for (servicio s : c.getListaServicios()) {
-                    reporte.append("   ID Servicio: ").append(s.getIdServicio()).append("\n");
-                    reporte.append("   Descripción: ").append(s.getDescripcion()).append("\n");
-                    reporte.append("   Estado: ").append(s.getEstado()).append("\n");
-                    reporte.append("   Monto: ").append(String.format("$%.2f", s.getMontoServicio())).append("\n");
-                    reporte.append("   ----------------------\n");
-                }
-            }
-            reporte.append("\n");
-        }
-
-        // Asignar el reporte completo al JTextArea
-        jTextArea2.setText(reporte.toString());
-     */
-    
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-       jTextArea2.setText("");
-
-        // Verificar si la lista de contratos no está vacía
-        if (listaContratos.isEmpty()) {
-            jTextArea2.append("No hay contratos para listar.");
+        if (blockchain == null || blockchain.size() == 0) {
+            JOptionPane.showMessageDialog(this, "La cadena de bloques está vacía. ¡Cree el bloque Génesis primero!", "Error de Reporte", JOptionPane.WARNING_MESSAGE);
+            jTextArea3.setText(""); // Limpiar el área de texto
             return;
         }
 
-        StringBuilder reporte = new StringBuilder();
-        reporte.append("=================== REPORTE DE CONTRATOS ===================\n\n");
+        // Llamamos a la función de reporte completo de la BlockChain
+        String reporteCompleto = blockchain.getFullReport();
 
-        for (contratos c : listaContratos) {
-            reporte.append("ID Contrato: ").append(c.getIdContrato()).append("\n");
-            reporte.append("Cliente: ").append(c.getParteA()).append("\n");
-            reporte.append("Proveedor: ").append(c.getParteB()).append("\n");
-            reporte.append("Valor Total del Contrato: ").append(String.format("$%.2f", c.getValorTotal())).append("\n");
-            reporte.append("--- Servicios del Contrato ---\n");
+        // Mostramos el resultado en el área de texto de la GUI
+        jTextArea3.setText(reporteCompleto);
+        mostrarUltimoBloque();
 
-            if (c.getListaServicios().isEmpty()) {
-                reporte.append("   (Este contrato no tiene servicios registrados)\n");
-            } else {
-                for (servicio s : c.getListaServicios()) {
-                    reporte.append("   ID Servicio: ").append(s.getIdServicio()).append("\n");
-                    reporte.append("   Descripción: ").append(s.getDescripcion()).append("\n");
-                    reporte.append("   Estado: ").append(s.getEstado()).append("\n");
-                    reporte.append("   Monto: ").append(String.format("$%.2f", s.getMontoServicio())).append("\n");
-                    reporte.append("   ----------------------\n");
-                }
-            }
-            reporte.append("\n");
-        }
-
-        // Asignar el reporte completo al JTextArea
-        jTextArea2.setText(reporte.toString());
-        mostrarUltimoBloqueEnTextArea3();
+        // Hacemos scroll al inicio para ver el encabezado
+        jTextArea3.setCaretPosition(0);
     }//GEN-LAST:event_jButton4ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-        // TODO add your handling code here:
         if (listaContratos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay contratos para generar el reporte JSON.", "Reporte Vacío", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No hay contratos para generar el reporte JSON.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Porción de código para crear el apuntador del archivo con JFileChooser
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Guardar Reporte JSON");
-
-        // Configurar el filtro de archivo para JSON
         fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos JSON (*.json)", "json"));
 
         int userSelection = fileChooser.showSaveDialog(this);
@@ -575,7 +483,6 @@ public class appContratosGUI extends javax.swing.JFrame {
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             fileToSave = fileChooser.getSelectedFile();
             String filePath = fileToSave.getAbsolutePath();
-            // Asegurarse de que el nombre del archivo termine en .json
             if (!filePath.toLowerCase().endsWith(".json")) {
                 fileToSave = new File(filePath + ".json");
             }
@@ -583,51 +490,16 @@ public class appContratosGUI extends javax.swing.JFrame {
             return;
         }
 
-        // Porción de código para ensamblar el reporte JSON
-        StringBuilder jsonContent = new StringBuilder();
-        jsonContent.append("{\n");
-        jsonContent.append("    \"contratos\": [\n");
+        try {
+            String jsonContent = utils.ReportUtil.generateJsonForBlock(listaContratos);
 
-        for (int i = 0; i < listaContratos.size(); i++) {
-            contratos c = listaContratos.get(i);
-            jsonContent.append("        {\n");
-            jsonContent.append("            \"idContrato\": \"").append(c.getIdContrato()).append("\",\n");
-            jsonContent.append("            \"cliente\": \"").append(c.getParteA()).append("\",\n");
-            jsonContent.append("            \"proveedor\": \"").append(c.getParteB()).append("\",\n");
-            jsonContent.append("            \"valorTotal\": ").append(c.getValorTotal()).append(",\n");
-            jsonContent.append("            \"servicios\": [\n");
-
-            if (!c.getListaServicios().isEmpty()) {
-                for (int j = 0; j < c.getListaServicios().size(); j++) {
-                    servicio s = c.getListaServicios().get(j);
-                    jsonContent.append("                {\n");
-                    jsonContent.append("                    \"idServicio\": \"").append(s.getIdServicio()).append("\",\n");
-                    jsonContent.append("                    \"descripcion\": \"").append(s.getDescripcion()).append("\",\n");
-                    jsonContent.append("                    \"estado\": \"").append(s.getEstado()).append("\",\n");
-                    jsonContent.append("                    \"monto\": ").append(s.getMontoServicio()).append("\n");
-                    jsonContent.append("                }");
-                    if (j < c.getListaServicios().size() - 1) {
-                        jsonContent.append(",");
-                    }
-                    jsonContent.append("\n");
-                }
+            try (FileWriter writer = new FileWriter(fileToSave)) {
+                writer.write(jsonContent);
+                JOptionPane.showMessageDialog(this, "Reporte JSON generado con éxito.", "Reporte Creado", JOptionPane.INFORMATION_MESSAGE);
             }
-            jsonContent.append("            ]\n");
-            jsonContent.append("        }");
-            if (i < listaContratos.size() - 1) {
-                jsonContent.append(",");
-            }
-            jsonContent.append("\n");
-        }
-        jsonContent.append("    ]\n");
-        jsonContent.append("}\n");
-
-        // Escribir el contenido en un archivo
-        try (FileWriter writer = new FileWriter(fileToSave)) {
-            writer.write(jsonContent.toString());
-            JOptionPane.showMessageDialog(this, "Reporte JSON generado con éxito.", "Reporte Creado", JOptionPane.INFORMATION_MESSAGE);
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error al escribir el archivo JSON: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error al escribir el archivo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            logger.log(java.util.logging.Level.SEVERE, "Error al generar reporte JSON", e);
         }
     }//GEN-LAST:event_jButton5ActionPerformed
 
@@ -644,238 +516,96 @@ public class appContratosGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton7ActionPerformed
 
     private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
-        // TODO add your handling code here:
-        if (listaContratos.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "No hay contratos para incluir en un bloque.", "Sin Datos", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-
-    // Generar JSON (igual que en jButton4ActionPerformed)
-    StringBuilder reporte = new StringBuilder();
-    reporte.append("{\n");
-    reporte.append("  \"contratos\": [\n");
-    for (int i = 0; i < listaContratos.size(); i++) {
-        contratos c = listaContratos.get(i);
-        reporte.append("    {\n");
-        reporte.append("      \"idContrato\": \"").append(c.getIdContrato()).append("\",\n");
-        reporte.append("      \"cliente\": \"").append(c.getParteA()).append("\",\n");
-        reporte.append("      \"proveedor\": \"").append(c.getParteB()).append("\",\n");
-        reporte.append("      \"valorTotal\": ").append(c.getValorTotal()).append(",\n");
-        reporte.append("      \"servicios\": [\n");
-        for (int j = 0; j < c.getListaServicios().size(); j++) {
-            servicio s = c.getListaServicios().get(j);
-            reporte.append("        {\n");
-            reporte.append("          \"idServicio\": \"").append(s.getIdServicio()).append("\",\n");
-            reporte.append("          \"descripcion\": \"").append(s.getDescripcion()).append("\",\n");
-            reporte.append("          \"estado\": \"").append(s.getEstado()).append("\",\n");
-            reporte.append("          \"monto\": ").append(s.getMontoServicio()).append("\n");
-            reporte.append("        }");
-            if (j < c.getListaServicios().size() - 1) reporte.append(",");
-            reporte.append("\n");
+        // 1. Verificación Inicial
+        if (blockchain == null) {
+            JOptionPane.showMessageDialog(this, "La BlockChain no ha sido inicializada.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
-        reporte.append("      ]\n");
-        reporte.append("    }");
-        if (i < listaContratos.size() - 1) reporte.append(",");
-        reporte.append("\n");
-    }
-    reporte.append("  ]\n");
-    reporte.append("}\n");
 
-    String jsonContratos = reporte.toString();
+        // 2. Comprobar si hay contratos pendientes para minar
+        if (listaContratosPendientes.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No hay contratos pendientes para minar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-    // Minar el bloque
-    blockchain.minarBloque(jsonContratos);
+        try {
+            // 3. Crear el nuevo bloque
+            // Llama a createBlock(dataContratos) con los contratos pendientes
+            blockchain.createBlock(listaContratosPendientes);
 
-    // Actualizar el estado de la cadena
-    mostrarUltimoBloqueEnTextArea3();
+            // 4. Minar el nuevo bloque (el último añadido)
+            blockchain.mineBlock();
 
-    JOptionPane.showMessageDialog(this, 
-        "Bloque #" + (blockchain.size() - 1) + " minado.\n" +
-        "Hash: " + blockchain.obtenerUltimoBloque().getHash(),
-        "Blockchain", 
-        JOptionPane.INFORMATION_MESSAGE);
+            // 5. Actualizar la GUI y limpiar
+            JOptionPane.showMessageDialog(this,
+                    "Bloque #" + blockchain.getLastBlock().getId() + " minado con éxito.\n"
+                    + "Hash: " + blockchain.getLastBlock().getHash().substring(0, 10) + "...",
+                    "Minería Exitosa",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+
+            // **IMPORTANTE**: Limpiar la lista de pendientes (¡ya están en el bloque!)
+            listaContratosPendientes.clear();
+            // Si tienes un área que lista los pendientes, ¡actualízala!
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error al minar el bloque: " + e.getMessage(), "Error de Minería", JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_jButton8ActionPerformed
 
     private void jButtonGuardarBCActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonGuardarBCActionPerformed
-       try {
-        if (blockchain.size() < 1) {
-            JOptionPane.showMessageDialog(this, "No hay bloques para guardar.", "Sin Datos", JOptionPane.WARNING_MESSAGE);
+        if (blockchain == null || blockchain.size() == 0) {
+            JOptionPane.showMessageDialog(this, "La cadena está vacía.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // --- PASO 1: Seleccionar carpeta de destino ---
-        System.out.println("Diálogo de carpeta abierto...");
-        JFileChooser dirChooser = new JFileChooser();
-        dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY); // Asegura que solo se seleccionen carpetas
-        dirChooser.setDialogTitle("Seleccionar carpeta para guardar la blockchain cifrada");
-        if (dirChooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
-            System.out.println("Usuario canceló la selección de carpeta.");
-            return; // Usuario canceló
-        }
+        // 1. Abrir el diálogo para guardar
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Guardar Cadena de Bloques");
+        // Filtrar archivos para .dat
+        fileChooser.setFileFilter(new FileNameExtensionFilter("Archivo de BlockChain (.dat)", "dat"));
 
-        String carpetaDestino = dirChooser.getSelectedFile().getAbsolutePath();
-        System.out.println("Carpeta seleccionada: " + carpetaDestino);
+        int userSelection = fileChooser.showSaveDialog(this);
 
-        // Asegurar que la ruta termine con el separador de directorio
-        if (!carpetaDestino.endsWith(File.separator)) {
-            carpetaDestino += File.separator;
-        }
-        System.out.println("Carpeta destino final: " + carpetaDestino);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            String filePath = fileToSave.getAbsolutePath();
 
-        // Verificar que la ruta sea una carpeta válida
-        File carpeta = new File(carpetaDestino);
-        if (!carpeta.exists() || !carpeta.isDirectory()) {
-            JOptionPane.showMessageDialog(this, "La ruta seleccionada no es una carpeta válida o no existe.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // --- PASO 2: Seleccionar archivo de clave pública (.pub o .txt) ---
-        System.out.println("Diálogo de archivo .pub abierto...");
-        JFileChooser pubChooser = new JFileChooser();
-        pubChooser.setDialogTitle("Seleccionar archivo de clave pública (.pub o .txt)");
-        pubChooser.setFileFilter(new FileNameExtensionFilter("Archivos de Clave Pública (.pub, .txt)", "pub", "txt"));
-        pubChooser.setFileSelectionMode(JFileChooser.FILES_ONLY); // Solo archivos
-
-        if (pubChooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
-            System.out.println("Usuario canceló la selección de clave pública.");
-            return; // Usuario canceló
-        }
-        File archivoPub = pubChooser.getSelectedFile();
-        System.out.println("Archivo .pub seleccionado: " + archivoPub.getAbsolutePath());
-
-        // Verificar que el archivo exista
-        if (!archivoPub.exists()) {
-             JOptionPane.showMessageDialog(this, "El archivo de clave pública no existe.", "Error", JOptionPane.ERROR_MESSAGE);
-             return;
-        }
-
-        // --- PASO 3: Cargar la clave pública usando Bouncy Castle y PemReader ---
-        // Este es el código que funciona, similar al de Desencriptar.java
-        PublicKey clavePublica;
-        try (FileReader reader = new FileReader(archivoPub);
-             org.bouncycastle.openssl.PEMParser parser = new org.bouncycastle.openssl.PEMParser(reader)) { // Usar PEMParser
-
-            Object objeto = parser.readObject();
-
-            if (objeto == null) {
-                throw new PEMException("El archivo está vacío o el formato PEM es incorrecto.");
+            // Asegurar que tenga la extensión .dat
+            if (!filePath.toLowerCase().endsWith(".dat")) {
+                filePath += ".dat";
             }
 
-            // Usar JcaPEMKeyConverter
-            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
-
-            // 1. Manejar SubjectPublicKeyInfo (El formato moderno y más común para claves públicas PEM)
-            if (objeto instanceof SubjectPublicKeyInfo) {
-                System.out.println("Formato de clave detectado: SubjectPublicKeyInfo");
-                clavePublica = converter.getPublicKey((SubjectPublicKeyInfo) objeto);
-
-            // 2. Manejar la conversión de PemObject (si se leyó un objeto genérico)
-            // Esto cubre el caso donde PemReader/PemParser devuelve un PemObject simple.
-            } else if (objeto instanceof PemObject) {
-                PemObject pemObject = (PemObject) objeto;
-                if ("PUBLIC KEY".equals(pemObject.getType()) || "RSA PUBLIC KEY".equals(pemObject.getType())) {
-                     // Intentar convertir el contenido del PemObject
-                     System.out.println("Formato de clave detectado: PemObject (" + pemObject.getType() + ")");
-                     SubjectPublicKeyInfo spki = SubjectPublicKeyInfo.getInstance(pemObject.getContent());
-                     clavePublica = converter.getPublicKey(spki);
-                } else {
-                    throw new PEMException("El objeto PEM no es una clave pública válida (Tipo: " + pemObject.getType() + ")");
-                }
-            }
-            
-            // 3. Manejar cualquier otro objeto que el conversor pueda manejar directamente
-            else if (objeto instanceof PublicKey) {
-                System.out.println("Formato de clave detectado: PublicKey directa.");
-                clavePublica = (PublicKey) objeto;
-            }
-            else {
-                 throw new PEMException("El archivo no contiene un objeto de clave pública reconocido. Tipo encontrado: " + objeto.getClass().getName());
-            }
-
-        } // Fin del try-with-resources (parser y reader se cierran automáticamente)
-
-
-        System.out.println("Clave pública cargada correctamente.");
-
-        // --- PASO 4: Recorrer cada bloque y guardarlo ---
-        int cantidadBloques = blockchain.getCadena().size();
-        System.out.println("Cantidad de bloques a guardar: " + cantidadBloques);
-
-        for (Block bloque : blockchain.getCadena()) {
-            // Convertir bloque a JSON
-            String jsonBloque = "{\n" +
-                "  \"indice\": " + bloque.getIndice() + ",\n" +
-                "  \"timestamp\": " + bloque.getTimestamp() + ",\n" +
-                "  \"hashAnterior\": \"" + bloque.getHashAnterior() + "\",\n" +
-                "  \"hash\": \"" + bloque.getHash() + "\",\n" +
-                "  \"nonce\": " + bloque.getNonce() + ",\n" +
-                "  \"datos\": " + bloque.getDatos() + "\n" +
-                "}";
-
-            System.out.println("Convirtiendo bloque " + bloque.getIndice() + " a JSON...");
-
-            // Cifrar el JSON del bloque
-            String jsonCifrado = Encriptar.cifrarJSON(jsonBloque, clavePublica);
-            System.out.println("Bloque " + bloque.getIndice() + " cifrado.");
-
-            // Crear el nombre del archivo: bloque_0.enc, bloque_1.enc, etc.
-            String nombreArchivo = "bloque_" + bloque.getIndice() + ".enc";
-            System.out.println("Nombre de archivo para bloque " + bloque.getIndice() + ": " + nombreArchivo);
-
-            // Construir la ruta completa
-            String rutaCompleta = carpetaDestino + nombreArchivo;
-            System.out.println("Ruta completa para guardar: " + rutaCompleta);
-
-            // --- PASO 5: Escribir el archivo ---
-            try (FileWriter writer = new FileWriter(rutaCompleta)) {
-                writer.write(jsonCifrado);
-                System.out.println("Archivo guardado correctamente: " + rutaCompleta);
-            } catch (IOException e) {
-                System.err.println("Error al escribir el archivo " + rutaCompleta + ": " + e.getMessage());
-                throw e; // Relanza la excepción para que sea capturada por el JOptionPane
+            // 2. Llamar a la función de guardado
+            if (blockchain.saveChain(filePath)) {
+                JOptionPane.showMessageDialog(this, "Cadena guardada exitosamente en:\n" + filePath, "Guardado Exitoso", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Fallo al guardar la cadena.", "Error de Guardado", JOptionPane.ERROR_MESSAGE);
             }
         }
-
-        // --- PASO 6: Mensaje de éxito ---
-        JOptionPane.showMessageDialog(this,
-            "✅ Blockchain guardada como " + cantidadBloques + " archivos cifrados (.enc) en:\n" + carpetaDestino,
-            "Éxito",
-            JOptionPane.INFORMATION_MESSAGE);
-        System.out.println("Proceso de guardado completado exitosamente.");
-
-    } catch (Exception e) {
-        e.printStackTrace(); // Muestra el error completo en consola
-        JOptionPane.showMessageDialog(this, "Error al guardar la blockchain: " + e.getMessage() + "\n\nMira la consola para más detalles.", "Error", JOptionPane.ERROR_MESSAGE);
-    }
     }//GEN-LAST:event_jButtonGuardarBCActionPerformed
 
     private void jButtonGuardarBC1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonGuardarBC1ActionPerformed
-        // TODO add your handling code here:
-        if (blockchain.size() <= 1) {
-        JOptionPane.showMessageDialog(this, "Necesitas minar bloques para usar la validación de DB.", "Advertencia", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-
-    try {
-        System.out.println("\n--- Iniciando validación con PostgreSQL ---");
-        
-        // Llama al nuevo método de validación
-        if (blockchain.esValidaConBaseDeDatos()) {
-            JOptionPane.showMessageDialog(this, 
-                "VALIDACIÓN EXITOSA: La cadena de bloques es confiable (Hash y Nonce de DB validados).", 
-                "Integridad Comprobada", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            JOptionPane.showMessageDialog(this, 
-                "¡FALLO! La cadena ha sido alterada o el Nonce de DB no es el correcto.", 
-                "FALLO CRÍTICO", JOptionPane.ERROR_MESSAGE);
+        if (blockchain == null || blockchain.size() == 0) {
+            JOptionPane.showMessageDialog(this, "La cadena de bloques está vacía.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            return;
         }
-    } catch (SQLException e) {
-        // Captura errores de conexión o tabla inexistente.
-        JOptionPane.showMessageDialog(this, 
-            "ERROR DE CONEXIÓN A DB:Detalles: " + e.getMessage(), 
-            "Error de Base de Datos", JOptionPane.ERROR_MESSAGE);
-    }
+
+        // 1. Llamar a la función de validación
+        boolean esValida = blockchain.isChainValid();
+
+        // 2. Mostrar el resultado
+        if (esValida) {
+            JOptionPane.showMessageDialog(this, "¡La BlockChain es VÁLIDA!\nLa integridad de los datos está intacta.", "Validación Exitosa", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "¡ALERTA! La BlockChain es INVÁLIDA.\nSe ha detectado manipulación o error en el hash.", "Validación Fallida", JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_jButtonGuardarBC1ActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        views.clienteGUI clienteView = new views.clienteGUI(this.listaContratos, this.listaContratosPendientes);
+        clienteView.setVisible(true);
+    }//GEN-LAST:event_jButton1ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -901,42 +631,32 @@ public class appContratosGUI extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(() -> new appContratosGUI().setVisible(true));
     }
-    
-    private void actualizarEstadoBlockchain() {
-        boolean esValida = blockchain.esValida();
-        String estado = String.format(
-            "Bloques: %d | Estado: %s | Último hash: %s",
-            blockchain.size(),
-            esValida ? "VÁLIDA" : "INVÁLIDA",
-            blockchain.size() > 0 ? blockchain.obtenerUltimoBloque().getHash().substring(0, 12) + "..." : "N/A"
-        );
-        jTextArea3.setText(estado);
-    }
-private void mostrarUltimoBloqueEnTextArea3() {
-    // 1. Obtener el último bloque de la cadena
-    if (blockchain.size() == 0) {
-        jTextArea3.setText("La cadena está vacía.");
-        return;
-    }
-    
-    Block ultimoBloque = blockchain.obtenerUltimoBloque();
 
-    // 2. Formatear la información del bloque
-    // Usaremos los getters de la clase Block
-    StringBuilder sb = new StringBuilder();
-    sb.append("--- ÚLTIMO BLOQUE DE LA CADENA ---\n");
-    sb.append("  Índice: ").append(ultimoBloque.getIndice()).append("\n");
-    sb.append("  Timestamp: ").append(ultimoBloque.getTimestamp()).append(" seg\n");
-    sb.append("  Nonce: ").append(ultimoBloque.getNonce()).append("\n");
-    sb.append("  Hash Anterior: ").append(ultimoBloque.getHashAnterior()).append("\n");
-    sb.append("  Hash Actual: ").append(ultimoBloque.getHash()).append("\n");
-    sb.append("--------------------------------------\n");
-    sb.append("DATOS (Contratos): \n").append(ultimoBloque.getDatos()).append("\n");
+    private void mostrarUltimoBloqueEnTextArea3() {
+        // 1. Obtener el último bloque de la cadena
+        if (blockchain.size() == 0) {
+            jTextArea3.setText("La cadena está vacía.");
+            return;
+        }
 
-    // 3. Establecer el texto en jTextArea3
-    jTextArea3.setText(sb.toString());
-}
-    
+        Block ultimoBloque = blockchain.getLastBlock();
+
+        // 2. Formatear la información del bloque
+        // Usaremos los getters de la clase Block
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- ÚLTIMO BLOQUE DE LA CADENA ---\n");
+        sb.append("  Índice: ").append(ultimoBloque.getId()).append("\n");
+        sb.append("  Timestamp: ").append(ultimoBloque.getTimeStamp()).append(" seg\n");
+        sb.append("  Nonce: ").append(ultimoBloque.getNonce()).append("\n");
+        sb.append("  Hash Anterior: ").append(ultimoBloque.getPreviousHash()).append("\n");
+        sb.append("  Hash Actual: ").append(ultimoBloque.getHash()).append("\n");
+        sb.append("--------------------------------------\n");
+        sb.append("DATOS (Contratos): \n").append(ultimoBloque.getListaContratos()).append("\n");
+
+        // 3. Establecer el texto en jTextArea3
+        jTextArea3.setText(sb.toString());
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton11;

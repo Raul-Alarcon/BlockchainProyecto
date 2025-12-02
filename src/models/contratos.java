@@ -4,13 +4,14 @@
  */
 package models;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
  *
  * @author Raul
  */
-public class contratos {
+public class contratos implements Serializable{
     private String idContrato;
     private String parteA;
     private String parteB;

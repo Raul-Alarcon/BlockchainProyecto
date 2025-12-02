@@ -49,7 +49,7 @@ public class ReportUtil {
         return reporte.toString();
     }
     
-    public static String generateHtmlContent(ArrayList<contratos> listaContratos) {
+    public static String generateHtmlReport(ArrayList<contratos> listaContratos) {
         StringBuilder htmlContent = new StringBuilder();
         htmlContent.append("<!DOCTYPE html>\n");
         htmlContent.append("<html lang=\"es\">\n");

@@ -4,11 +4,13 @@
  */
 package models;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Raul
  */
-public class servicio {
+public class servicio implements Serializable{
     private String idServicio;
     private String descripcion;
     private String estado;

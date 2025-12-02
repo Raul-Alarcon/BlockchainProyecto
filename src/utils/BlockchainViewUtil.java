@@ -11,20 +11,18 @@ import models.BlockChain;
  * @author Raul
  */
 public class BlockchainViewUtil {
-    public static String formatLastBlock(Block ultimoBloque) {
+    public static String formatLastBlock(BlockChain blockchain, Block ultimoBloque) { 
         if (ultimoBloque == null) {
              return "La cadena está vacía.";
         }
         
         StringBuilder sb = new StringBuilder();
-        sb.append("--- ÚLTIMO BLOQUE DE LA CADENA ---\n");
-        sb.append("  Índice: ").append(ultimoBloque.getIndice()).append("\n");
-        sb.append("  Timestamp: ").append(ultimoBloque.getTimestamp()).append(" seg\n");
-        // ... (resto de las líneas de formato)
-        sb.append("  Hash Anterior: ").append(ultimoBloque.getHashAnterior()).append("\n");
-        sb.append("  Hash Actual: ").append(ultimoBloque.getHash()).append("\n");
-        sb.append("--------------------------------------\n");
-        sb.append("DATOS (Contratos): \n").append(ultimoBloque.getDatos()).append("\n");
+        // ... (resto del formato del encabezado del bloque)
+
+        // Usamos el método de reporte que está dentro de BlockChain
+        String reporteDatos = blockchain.contratosReport(ultimoBloque.getId()); 
+        sb.append("DATOS (Contratos): \n").append(reporteDatos).append("\n");
+        
         return sb.toString();
     }
 }
