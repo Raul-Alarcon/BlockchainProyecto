@@ -27,15 +27,10 @@ CREATE INDEX IF NOT EXISTS idx_prev_hash ON nonces(prev_hash);
 CREATE INDEX IF NOT EXISTS idx_block_id ON nonces(block_id);
 CREATE INDEX IF NOT EXISTS idx_timestamp ON nonces(timestamp);
 
--- 5. Insertar datos de prueba (opcional)
-INSERT INTO nonces (block_id, prev_hash, nonce, hash, timestamp) 
-VALUES 
-    (0, '0000000000000000000000000000000000000000000000000000000000000000', 12345, '0000abcd1234567890abcdef1234567890abcdef1234567890abcdef12345678', 1234567890),
-    (1, '0000abcd1234567890abcdef1234567890abcdef1234567890abcdef12345678', 67890, '00001234abcdef567890abcdef1234567890abcdef1234567890abcdef123456', 1234567900)
-ON CONFLICT (block_id, prev_hash) DO NOTHING;
+-- 5. Verificar tabla creada
+SELECT COUNT(*) as total_registros FROM nonces;
 
--- 6. Verificar datos
-SELECT * FROM nonces;
+-- NOTA: No insertar datos de prueba. Los nonces reales se guardarán automáticamente al minar bloques.
 
 -- 7. Mostrar estructura de la tabla
 \d nonces

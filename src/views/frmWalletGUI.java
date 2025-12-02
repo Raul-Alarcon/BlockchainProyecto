@@ -26,10 +26,14 @@ public class frmWalletGUI extends JFrame {
     private JComboBox<String> cmbEstado;
     private JComboBox<String> cmbServidores;
     private JButton btnAgregarServicio;
-    private JButton btnEnviarContrato;
+    private JButton btnAgregarAPool;
+    private JButton btnEnviarTodos;
     private JTextArea txtContratoActual;
+    private JTextArea txtPoolContratos;
+    private JLabel lblContadorPool;
     
     private contratos contratoActual;
+    private ArrayList<contratos> poolContratos;
     
     public frmWalletGUI(NodeData wallet, NodeData server) {
         this.walletNode = wallet;
@@ -37,6 +41,7 @@ public class frmWalletGUI extends JFrame {
         this.wallet = new WalletContratos(wallet, server);
         this.servidores = new ArrayList<>();
         this.contratoActual = null;
+        this.poolContratos = new ArrayList<>();
         initComponents();
     }
     
@@ -129,10 +134,19 @@ public class frmWalletGUI extends JFrame {
         cmbServidores.addItem(serverNode.getNodeName());
         panelEnvio.add(cmbServidores);
         
-        btnEnviarContrato = new JButton("Enviar Contrato al Servidor");
-        btnEnviarContrato.setEnabled(false);
-        btnEnviarContrato.addActionListener(e -> enviarContrato());
-        panelEnvio.add(btnEnviarContrato);
+        btnAgregarAPool = new JButton("Agregar a Pool");
+        btnAgregarAPool.setEnabled(false);
+        btnAgregarAPool.addActionListener(e -> agregarAPool());
+        panelEnvio.add(btnAgregarAPool);
+        
+        btnEnviarTodos = new JButton("Enviar Todos y Minar");
+        btnEnviarTodos.setEnabled(false);
+        btnEnviarTodos.addActionListener(e -> enviarTodosYMinar());
+        panelEnvio.add(btnEnviarTodos);
+        
+        lblContadorPool = new JLabel("Pool: 0 contratos");
+        lblContadorPool.setFont(new Font("Arial", Font.BOLD, 12));
+        panelEnvio.add(lblContadorPool);
         
         panelFormulario.add(panelContrato);
         panelFormulario.add(Box.createVerticalStrut(10));
@@ -185,7 +199,7 @@ public class frmWalletGUI extends JFrame {
             txtMonto.setText("");
             
             actualizarVistaContrato();
-            btnEnviarContrato.setEnabled(true);
+            btnAgregarAPool.setEnabled(true);
             JOptionPane.showMessageDialog(this, "Servicio agregado al contrato");
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "El monto debe ser un número válido");
@@ -211,70 +225,52 @@ public class frmWalletGUI extends JFrame {
         txtContratoActual.setText(sb.toString());
     }
     
-    private void enviarContrato() {
+    private void agregarAPool() {
         if (contratoActual == null) {
-            JOptionPane.showMessageDialog(this, "No hay contrato para enviar");
+            JOptionPane.showMessageDialog(this, "No hay contrato para agregar");
             return;
         }
         
-        // Convertir contrato a JSON
-        String jsonContrato = contratoToJSON(contratoActual);
+        poolContratos.add(contratoActual);
+        JOptionPane.showMessageDialog(this, "✅ Contrato agregado al pool\nTotal: " + poolContratos.size());
         
-        // Enviar al servidor
-        boolean enviado = wallet.enviarContrato(jsonContrato);
-        
-        if (enviado) {
-            JOptionPane.showMessageDialog(this, "Contrato enviado al servidor para minado");
-            contratoActual = null;
-            limpiarFormulario();
-        } else {
-            JOptionPane.showMessageDialog(this, "Error al enviar el contrato", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-    
-    private String contratoToJSON(contratos c) {
-        StringBuilder json = new StringBuilder();
-        json.append("{\n");
-        json.append("  \"idContrato\": \"").append(c.getIdContrato()).append("\",\n");
-        json.append("  \"cliente\": \"").append(c.getParteA()).append("\",\n");
-        json.append("  \"proveedor\": \"").append(c.getParteB()).append("\",\n");
-        json.append("  \"valorTotal\": ").append(c.getValorTotal()).append(",\n");
-        json.append("  \"servicios\": [\n");
-        
-        for (int i = 0; i < c.getListaServicios().size(); i++) {
-            servicio s = c.getListaServicios().get(i);
-            json.append("    {\n");
-            json.append("      \"idServicio\": \"").append(s.getIdServicio()).append("\",\n");
-            json.append("      \"descripcion\": \"").append(s.getDescripcion()).append("\",\n");
-            json.append("      \"estado\": \"").append(s.getEstado()).append("\",\n");
-            json.append("      \"monto\": ").append(s.getMontoServicio()).append("\n");
-            json.append("    }");
-            if (i < c.getListaServicios().size() - 1) json.append(",");
-            json.append("\n");
-        }
-        
-        json.append("  ]\n");
-        json.append("}");
-        return json.toString();
-    }
-    
-    private void limpiarFormulario() {
+        // Limpiar para nuevo contrato
+        contratoActual = null;
         txtIdContrato.setText("");
         txtParteA.setText("");
         txtParteB.setText("");
-        txtIdServicio.setText("");
-        txtDescripcion.setText("");
-        txtMonto.setText("");
         txtContratoActual.setText("");
         btnAgregarServicio.setEnabled(false);
-        btnEnviarContrato.setEnabled(false);
+        btnAgregarAPool.setEnabled(false);
+        btnEnviarTodos.setEnabled(true);
+        
+        // Actualizar contador
+        lblContadorPool.setText("Pool: " + poolContratos.size() + " contratos");
+    }
+    
+    private void enviarTodosYMinar() {
+        if (poolContratos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No hay contratos en el pool");
+            return;
+        }
+        
+        // Enviar todos los contratos al servidor
+        boolean todosEnviados = wallet.enviarMultiplesContratos(poolContratos);
+        
+        if (todosEnviados) {
+            JOptionPane.showMessageDialog(this, 
+                "✅ " + poolContratos.size() + " contrato(s) enviados al servidor\nEl bloque se está minando...");
+            
+            // Limpiar pool
+            poolContratos.clear();
+            lblContadorPool.setText("Pool: 0 contratos");
+            btnEnviarTodos.setEnabled(false);
+        } else {
+            JOptionPane.showMessageDialog(this, "❌ Error al enviar contratos");
+        }
     }
     
     public void updateServers(ArrayList<NodeData> servers) {
         this.servidores = servers;
-        cmbServidores.removeAllItems();
-        for (NodeData server : servers) {
-            cmbServidores.addItem(server.getNodeName());
-        }
     }
 }

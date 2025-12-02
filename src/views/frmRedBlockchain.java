@@ -116,18 +116,32 @@ public class frmRedBlockchain extends JFrame {
         }
         
         NodeData nodeServer = new NodeData(nombre, ip, puerto);
-        aServers.add(nodeServer);
-        cmbServers.addItem(nombre);
         
         // Crear GUI del servidor
         frmServidorGUI frmServer = new frmServidorGUI(nodeServer);
         
-        // Si hay servidores previos, copiar blockchain
+        // Si hay servidores previos, sincronizar blockchain
         if (aFrmServers.size() > 0) {
-            BlockChain bcCopy = ((frmServidorGUI) aFrmServers.get(0)).getBlockchain();
-            frmServer.setBlockchain(bcCopy);
+            // Obtener la blockchain más actualizada
+            BlockChain bcActualizada = null;
+            int maxSize = 0;
+            
+            for (JFrame frm : aFrmServers) {
+                BlockChain bc = ((frmServidorGUI) frm).getBlockchain();
+                if (bc.size() > maxSize) {
+                    maxSize = bc.size();
+                    bcActualizada = bc;
+                }
+            }
+            
+            if (bcActualizada != null) {
+                frmServer.setBlockchain(bcActualizada);
+                System.out.println("✅ Blockchain sincronizada: " + bcActualizada.size() + " bloques");
+            }
         }
         
+        aServers.add(nodeServer);
+        cmbServers.addItem(nombre);
         frmServer.setVisible(true);
         aFrmServers.add(frmServer);
         

@@ -21,7 +21,8 @@ public class frmServidorGUI extends JFrame {
     
     public frmServidorGUI(NodeData nodeData) {
         this.currentNode = nodeData;
-        this.blockchain = new BlockChain();
+        this.blockchain = new BlockChain(3, "0");
+        this.blockchain.createGenesis(new java.util.ArrayList<>());
         initComponents();
         this.servidor = new ServidorContratos(nodeData, blockchain, txtMessages);
     }
@@ -100,7 +101,10 @@ public class frmServidorGUI extends JFrame {
     
     public void setBlockchain(BlockChain bc) {
         this.blockchain = bc;
-        this.servidor = new ServidorContratos(currentNode, blockchain, txtMessages);
+        // Actualizar la referencia del servidor a la nueva blockchain
+        if (this.servidor != null) {
+            this.servidor.setBlockchain(bc);
+        }
     }
     
     private void verBlockchain() {
@@ -108,13 +112,13 @@ public class frmServidorGUI extends JFrame {
         sb.append("========== BLOCKCHAIN ==========\n");
         sb.append("Total de bloques: ").append(blockchain.size()).append("\n\n");
         
-        for (int i = 0; i < blockchain.getCadena().size(); i++) {
-            var bloque = blockchain.getCadena().get(i);
-            sb.append("Bloque #").append(bloque.getIndice()).append("\n");
+        for (int i = 0; i < blockchain.getBlockChain().size(); i++) {
+            var bloque = blockchain.getBlock(i);
+            sb.append("Bloque #").append(bloque.getId()).append("\n");
             sb.append("Hash: ").append(bloque.getHash()).append("\n");
-            sb.append("Hash Anterior: ").append(bloque.getHashAnterior()).append("\n");
+            sb.append("Hash Anterior: ").append(bloque.getPreviousHash()).append("\n");
             sb.append("Nonce: ").append(bloque.getNonce()).append("\n");
-            sb.append("Datos: ").append(bloque.getDatos().substring(0, Math.min(50, bloque.getDatos().length()))).append("...\n");
+            sb.append("Contratos: ").append(bloque.countContratos()).append("\n");
             sb.append("--------------------------------\n");
         }
         

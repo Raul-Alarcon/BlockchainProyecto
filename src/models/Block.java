@@ -80,7 +80,8 @@ public class Block implements Serializable {
     }
 
     public ArrayList<contratos> getListaContratos() {
-        return listaContratos;
+        // Retornar una copia para evitar modificaciones externas
+        return new ArrayList<>(listaContratos);
     }
 
     @Override
