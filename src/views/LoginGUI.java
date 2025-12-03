@@ -147,7 +147,7 @@ public class LoginGUI extends javax.swing.JFrame {
 
     private void abrirAppPrincipal() {
         java.awt.EventQueue.invokeLater(() -> {
-            appContratosGUI app = new appContratosGUI(usuarioActual);
+            appContratosGUI app = new appContratosGUI();
             app.setVisible(true);
         });
     }

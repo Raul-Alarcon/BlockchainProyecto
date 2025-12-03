@@ -137,13 +137,24 @@ public class frmRedBlockchain extends JFrame {
             if (bcActualizada != null) {
                 frmServer.setBlockchain(bcActualizada);
                 System.out.println("✅ Blockchain sincronizada: " + bcActualizada.size() + " bloques");
+                // Actualizar blockchain compartida
+                appContratosGUI.setBlockchainCompartida(bcActualizada);
             }
+        } else {
+            // Primer servidor, establecer su blockchain como compartida
+            appContratosGUI.setBlockchainCompartida(frmServer.getBlockchain());
         }
         
         aServers.add(nodeServer);
         cmbServers.addItem(nombre);
         frmServer.setVisible(true);
         aFrmServers.add(frmServer);
+        
+        // Establecer blockchain compartida en appContratosGUI
+        if (aFrmServers.size() == 1) {
+            // Primer servidor, establecer su blockchain como compartida
+            appContratosGUI.setBlockchainCompartida(frmServer.getBlockchain());
+        }
         
         // Broadcast a todos los servidores
         broadcastServers();

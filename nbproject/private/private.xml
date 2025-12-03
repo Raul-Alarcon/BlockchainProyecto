@@ -3,9 +3,13 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
+            <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/controller/WalletContratos.java</file>
             <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/views/appContratosGUI.java</file>
-            <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/controller/TestConexionDB.java</file>
-            <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/controller/ServidorContratos.java</file>
+            <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/views/frmServidorGUI.java</file>
+            <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/views/frmWalletGUI.java</file>
+            <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/views/LoginGUI.java</file>
+            <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/models/contratos.java</file>
+            <file>file:/C:/Users/Moris/OneDrive/Documentos/DS3/BlockchainProyecto/src/views/frmRedBlockchain.java</file>
         </group>
     </open-files>
 </project-private>

@@ -39,35 +39,42 @@ import java.sql.SQLException;
  */
 public class appContratosGUI extends javax.swing.JFrame {
 
-    private final ArrayList<contratos> listaContratos;
-    private ArrayList<contratos> listaContratosPendientes;
     private DefaultComboBoxModel<String> comboModel;
     private BlockChain blockchain;
-    private models.Usuario usuarioActual;
+    private static BlockChain blockchainCompartida;
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(appContratosGUI.class.getName());
 
     /**
      * Creates new form appContratosGUI constructor
      */
-    public appContratosGUI(models.Usuario usuario) {
-        this.usuarioActual = usuario;
+    public appContratosGUI() {
         initComponents();
         Security.addProvider(new BouncyCastleProvider());
-        this.listaContratos = new ArrayList<>();
-        this.blockchain = new BlockChain(4, "0");
-        boolean genesisCreado = this.blockchain.createGenesis(new ArrayList<>());
-        if (genesisCreado) {
-            System.out.println("Bloque Genesis creado con exito.");
+        
+        // Usar blockchain compartida si existe, sino crear una nueva
+        if (blockchainCompartida != null) {
+            this.blockchain = blockchainCompartida;
+            System.out.println("✅ Usando blockchain compartida con " + blockchain.size() + " bloques");
         } else {
-            System.out.println(" El Bloque Genesis ya existia o hubo un error.");
+            this.blockchain = new BlockChain(4, "0");
+            boolean genesisCreado = this.blockchain.createGenesis(new ArrayList<>());
+            if (genesisCreado) {
+                System.out.println("Bloque Genesis creado con exito.");
+            } else {
+                System.out.println(" El Bloque Genesis ya existia o hubo un error.");
+            }
+            blockchainCompartida = this.blockchain;
         }
-        this.listaContratosPendientes = new ArrayList<>();
-        this.setTitle("Blockchain - Usuario: " + usuario.getUsuario());
     }
-
-    public appContratosGUI() {
-        this(new models.Usuario(0, "invitado", "invitado@blockchain.com", "usuario", true));
+    
+    public static void setBlockchainCompartida(BlockChain bc) {
+        blockchainCompartida = bc;
+        System.out.println("✅ Blockchain compartida establecida con " + bc.size() + " bloques");
+    }
+    
+    public BlockChain getBlockchain() {
+        return this.blockchain;
     }
 
     private void mostrarUltimoBloque() {
@@ -109,8 +116,6 @@ public class appContratosGUI extends javax.swing.JFrame {
         jLabel8 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
         jPanel9 = new javax.swing.JPanel();
-        jLabelUsuario = new javax.swing.JLabel();
-        jButtonLogout = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -315,35 +320,15 @@ public class appContratosGUI extends javax.swing.JFrame {
 
         jPanel9.setBorder(javax.swing.BorderFactory.createTitledBorder("Info Usuario"));
 
-        jLabelUsuario.setText("Usuario: " + (usuarioActual != null ? usuarioActual.getUsuario() : "invitado"));
-        jLabelUsuario.setFont(new java.awt.Font("Segoe UI", 1, 12));
-
-        jButtonLogout.setText("Cerrar Sesión");
-        jButtonLogout.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButtonLogoutActionPerformed(evt);
-            }
-        });
-
         javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
         jPanel9.setLayout(jPanel9Layout);
         jPanel9Layout.setHorizontalGroup(
             jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel9Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabelUsuario)
-                    .addComponent(jButtonLogout, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+            .addGap(0, 0, Short.MAX_VALUE)
         );
         jPanel9Layout.setVerticalGroup(
             jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel9Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabelUsuario)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jButtonLogout)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGap(0, 0, Short.MAX_VALUE)
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -386,8 +371,14 @@ public class appContratosGUI extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-        if (listaContratos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay contratos para generar el reporte HTML.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+        // Obtener todos los contratos de la blockchain
+        ArrayList<contratos> todosContratos = new ArrayList<>();
+        for (int i = 0; i < blockchain.size(); i++) {
+            todosContratos.addAll(blockchain.getBlock(i).getListaContratos());
+        }
+        
+        if (todosContratos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No hay contratos en la blockchain.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -409,8 +400,7 @@ public class appContratosGUI extends javax.swing.JFrame {
         }
 
         try {
-            // *** REFACTORIZADO: Usa la clase ReportUtil ***
-            String htmlContent = utils.ReportUtil.generateHtmlReport(listaContratos);
+            String htmlContent = utils.ReportUtil.generateHtmlReport(todosContratos);
 
             try (FileWriter writer = new FileWriter(fileToSave)) {
                 writer.write(htmlContent);
@@ -423,26 +413,47 @@ public class appContratosGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton3ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+        // Actualizar referencia a blockchain compartida
+        if (blockchainCompartida != null) {
+            this.blockchain = blockchainCompartida;
+            System.out.println("⟳ Actualizando blockchain: " + blockchain.size() + " bloques");
+        }
+        
         if (blockchain == null || blockchain.size() == 0) {
-            JOptionPane.showMessageDialog(this, "La cadena de bloques está vacía. ¡Cree el bloque Génesis primero!", "Error de Reporte", JOptionPane.WARNING_MESSAGE);
-            jTextArea3.setText(""); // Limpiar el área de texto
+            JOptionPane.showMessageDialog(this, "La cadena de bloques está vacía.\nCrea un servidor desde 'Abrir Red Blockchain' primero.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            jTextArea3.setText("");
             return;
         }
 
-        // Llamamos a la función de reporte completo de la BlockChain
-        String reporteCompleto = blockchain.getFullReport();
-
-        // Mostramos el resultado en el área de texto de la GUI
-        jTextArea3.setText(reporteCompleto);
+        // Formato igual que verBlockchain() del servidor
+        StringBuilder sb = new StringBuilder();
+        sb.append("========== BLOCKCHAIN ==========\n");
+        sb.append("Total de bloques: ").append(blockchain.size()).append("\n\n");
+        
+        for (int i = 0; i < blockchain.getBlockChain().size(); i++) {
+            var bloque = blockchain.getBlock(i);
+            sb.append("Bloque #").append(bloque.getId()).append("\n");
+            sb.append("Hash: ").append(bloque.getHash()).append("\n");
+            sb.append("Hash Anterior: ").append(bloque.getPreviousHash()).append("\n");
+            sb.append("Nonce: ").append(bloque.getNonce()).append("\n");
+            sb.append("Contratos: ").append(bloque.countContratos()).append("\n");
+            sb.append("--------------------------------\n");
+        }
+        
+        jTextArea3.setText(sb.toString());
         mostrarUltimoBloque();
-
-        // Hacemos scroll al inicio para ver el encabezado
         jTextArea3.setCaretPosition(0);
     }//GEN-LAST:event_jButton4ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-        if (listaContratos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay contratos para generar el reporte JSON.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+        // Obtener todos los contratos de la blockchain
+        ArrayList<contratos> todosContratos = new ArrayList<>();
+        for (int i = 0; i < blockchain.size(); i++) {
+            todosContratos.addAll(blockchain.getBlock(i).getListaContratos());
+        }
+        
+        if (todosContratos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No hay contratos en la blockchain.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -464,7 +475,7 @@ public class appContratosGUI extends javax.swing.JFrame {
         }
 
         try {
-            String jsonContent = utils.ReportUtil.generateJsonForBlock(listaContratos);
+            String jsonContent = utils.ReportUtil.generateJsonForBlock(todosContratos);
 
             try (FileWriter writer = new FileWriter(fileToSave)) {
                 writer.write(jsonContent);
@@ -489,40 +500,10 @@ public class appContratosGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton7ActionPerformed
 
     private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
-        // 1. Verificación Inicial
-        if (blockchain == null) {
-            JOptionPane.showMessageDialog(this, "La BlockChain no ha sido inicializada.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // 2. Comprobar si hay contratos pendientes para minar
-        if (listaContratosPendientes.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay contratos pendientes para minar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        try {
-            // 3. Crear el nuevo bloque
-            blockchain.createBlock(listaContratosPendientes);
-
-            // 4. Minar el nuevo bloque (el último añadido)
-            blockchain.mineBlock();
-
-            // 5. Actualizar la GUI y limpiar
-            JOptionPane.showMessageDialog(this,
-                    "Bloque #" + blockchain.getLastBlock().getId() + " minado con éxito.\n"
-                    + "Hash: " + blockchain.getLastBlock().getHash().substring(0, 10) + "...",
-                    "Minería Exitosa",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-
-            // **IMPORTANTE**: Limpiar la lista de pendientes (¡ya están en el bloque!)
-            listaContratosPendientes.clear();
-            // Si tienes un área que lista los pendientes, ¡actualízala!
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error al minar el bloque: " + e.getMessage(), "Error de Minería", JOptionPane.ERROR_MESSAGE);
-        }
+        JOptionPane.showMessageDialog(this, 
+            "La minería se realiza automáticamente desde el Wallet.\nUsa 'Abrir Red Blockchain' para crear wallets y enviar contratos.", 
+            "Información", 
+            JOptionPane.INFORMATION_MESSAGE);
     }//GEN-LAST:event_jButton8ActionPerformed
 
     private void jButtonGuardarBCActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonGuardarBCActionPerformed
@@ -575,23 +556,16 @@ public class appContratosGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonGuardarBC1ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        views.clienteGUI clienteView = new views.clienteGUI(this.listaContratos, this.listaContratosPendientes);
-        clienteView.setVisible(true);
+        JOptionPane.showMessageDialog(this, 
+            "Usa 'Abrir Red Blockchain' para crear wallets y gestionar contratos.", 
+            "Información", 
+            JOptionPane.INFORMATION_MESSAGE);
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
         views.frmRedBlockchain redBlockchain = new views.frmRedBlockchain();
         redBlockchain.setVisible(true);
     }//GEN-LAST:event_jButton11ActionPerformed
-
-    private void jButtonLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonLogoutActionPerformed
-        int opcion = JOptionPane.showConfirmDialog(this, "¿Deseas cerrar sesión?", "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (opcion == JOptionPane.YES_OPTION) {
-            this.dispose();
-            LoginGUI login = new LoginGUI();
-            login.setVisible(true);
-        }
-    }//GEN-LAST:event_jButtonLogoutActionPerformed
 
     /**
      * @param args the command line arguments
@@ -614,8 +588,8 @@ public class appContratosGUI extends javax.swing.JFrame {
         }
         //</editor-fold>
 
-        /* Create and display the login form */
-        java.awt.EventQueue.invokeLater(() -> new LoginGUI().setVisible(true));
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(() -> new appContratosGUI().setVisible(true));
     }
 
     private void mostrarUltimoBloqueEnTextArea3() {
@@ -654,10 +628,8 @@ public class appContratosGUI extends javax.swing.JFrame {
     private javax.swing.JButton jButton8;
     private javax.swing.JButton jButtonGuardarBC;
     private javax.swing.JButton jButtonGuardarBC1;
-    private javax.swing.JButton jButtonLogout;
     private javax.swing.JComboBox<String> jComboBox3;
     private javax.swing.JLabel jLabel8;
-    private javax.swing.JLabel jLabelUsuario;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
